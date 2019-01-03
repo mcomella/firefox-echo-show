@@ -14,6 +14,7 @@ import android.net.Uri
 import android.support.annotation.AnyThread
 import android.support.annotation.UiThread
 import android.support.annotation.VisibleForTesting
+import com.squareup.picasso.Picasso
 import org.json.JSONArray
 import org.mozilla.focus.ext.isScreenXLarge
 import org.mozilla.focus.ext.toUri
@@ -113,6 +114,10 @@ class BundledTilesManager @VisibleForTesting constructor(
             }
         }
         return null
+    }
+
+    fun assetPath(context: Context, filename: String): String {
+        return getImagePathInAssets(context.resources.configuration, filename)
     }
 
     @AnyThread

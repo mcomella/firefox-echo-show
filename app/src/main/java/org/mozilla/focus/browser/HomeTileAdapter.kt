@@ -13,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.home_tile.view.*
 import kotlinx.coroutines.experimental.CompletableDeferred
 import kotlinx.coroutines.experimental.CoroutineStart
@@ -181,8 +182,11 @@ class HomeTileAdapter(
 }
 
 private fun onBindBundledHomeTile(holder: TileViewHolder, tile: BundledHomeTile) = with(holder) {
-    val bitmap = BundledTilesManager.getInstance(itemView.context).loadImageFromPath(itemView.context, tile.imagePath)
-    iconView.setImageBitmap(bitmap)
+//    val bitmap = BundledTilesManager.getInstance(itemView.context).loadImageFromPath(itemView.context, tile.imagePath)
+    val path = BundledTilesManager.getInstance(itemView.context).getImagePathInAssets(itemView.context.resources.configuration, tile.imagePath)
+    Picasso.get().load("file:///android_assets/$path")
+        .into(iconView)
+//    iconView.setImageBitmap(bitmap)
 
     // TODO remove hardcoded search tile title
     // This is necessary while bundled tiles are loaded from JSON (which cannot
@@ -198,13 +202,13 @@ private fun onBindCustomHomeTile(uiLifecycleCancelJob: Job, holder: TileViewHold
     launch(uiLifecycleCancelJob + UI, CoroutineStart.UNDISPATCHED) {
         val validUri = item.url.toJavaURI()
 
-        val screenshotDeferred = async {
-            val homeTileCornerRadius = itemView.resources.getDimension(R.dimen.home_tile_corner_radius)
-            val homeTilePlaceholderCornerRadius = itemView.resources.getDimension(R.dimen.home_tile_placeholder_corner_radius)
-            val screenshot = HomeTileScreenshotStore.read(itemView.context, item.id)?.withRoundedCorners(homeTileCornerRadius)
-            screenshot ?: HomeTilePlaceholderGenerator.generate(itemView.context, item.url)
-                    .withRoundedCorners(homeTilePlaceholderCornerRadius)
-        }
+//        val screenshotDeferred = async {
+//            val homeTileCornerRadius = itemView.resources.getDimension(R.dimen.home_tile_corner_radius)
+//            val homeTilePlaceholderCornerRadius = itemView.resources.getDimension(R.dimen.home_tile_placeholder_corner_radius)
+//            val screenshot = HomeTileScreenshotStore.read(itemView.context, item.id)?.withRoundedCorners(homeTileCornerRadius)
+//            screenshot ?: HomeTilePlaceholderGenerator.generate(itemView.context, item.url)
+//                    .withRoundedCorners(homeTilePlaceholderCornerRadius)
+//        }
 
         val titleDeferred = if (validUri == null) {
             CompletableDeferred(item.url)
@@ -216,13 +220,13 @@ private fun onBindCustomHomeTile(uiLifecycleCancelJob: Job, holder: TileViewHold
         }
 
         // We wait for both to complete so we can animate them together.
-        val screenshot = screenshotDeferred.await()
         val title = titleDeferred.await()
 
         // NB: Don't suspend after this point (i.e. between view updates like setImage)
         // so we don't see intermediate view states.
         // TODO: It'd be less error-prone to launch { /* bg work */ launch(UI) { /* UI work */ } }
-        iconView.setImageBitmap(screenshot)
+        val file = HomeTileScreenshotStore.getFileForUUID(itemView.context, item.id)
+        Picasso.get().load(file).into(iconView)
         titleView.text = title
 
         // Animate to avoid pop-in due to thread hand-offs. TODO: animation is janky.
@@ -230,10 +234,10 @@ private fun onBindCustomHomeTile(uiLifecycleCancelJob: Job, holder: TileViewHold
             interpolator = CUSTOM_TILE_ICON_INTERPOLATOR
             duration = CUSTOM_TILE_TO_SHOW_MILLIS
 
-            val iconAnim = ObjectAnimator.ofInt(iconView, "imageAlpha", 0, 255)
+//            val iconAnim = ObjectAnimator.ofInt(iconView, "imageAlpha", 0, 255)
             val titleAnim = ObjectAnimator.ofFloat(titleView, "alpha", 0f, 1f)
 
-            playTogether(iconAnim, titleAnim)
+            playTogether(titleAnim)
         }.start()
     }
 }
